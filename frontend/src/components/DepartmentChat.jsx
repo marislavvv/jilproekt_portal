@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { API_URL_BASE } from '../App'; 
+import { API_URL} from '../App'; 
 
 
 
@@ -24,7 +24,7 @@ function DepartmentChat({ user }) {
             const token = getToken();
             if (token) {
                 try {
-                    const response = await axios.get(`${API_URL_BASE}/auth/me`, { // <-- ИЗМЕНЕНИЕ 2
+                    const response = await axios.get(`${API_URL}/auth/me`, { // <-- ИЗМЕНЕНИЕ 2
                         headers: { 'x-auth-token': token }
                     });
                     setDepartment(response.data.department);
@@ -44,7 +44,7 @@ function DepartmentChat({ user }) {
         if (!department || !user) return; // Не подключаемся, пока нет отдела и данных пользователя
 
         // ИСПОЛЬЗУЕМ API_URL_BASE для подключения Socket.IO
-        const newSocket = io(API_URL_BASE.replace('/api', ''), { // <-- ИЗМЕНЕНИЕ 3: Удаляем "/api" для базового URL сокета
+        const newSocket = io(API_URL.replace('/api', ''), { // <-- ИЗМЕНЕНИЕ 3: Удаляем "/api" для базового URL сокета
             query: { token: getToken() } // Отправляем токен при подключении
         });
 

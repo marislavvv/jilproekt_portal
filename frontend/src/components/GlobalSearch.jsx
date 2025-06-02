@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { API_URL_BASE } from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
+import { API_URL} from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
-// Удалите или закомментируйте эту строку
-// const API_URL = 'http://localhost:5000/api';
+
 
 function GlobalSearch({ onNavigateToPage }) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -28,9 +27,9 @@ function GlobalSearch({ onNavigateToPage }) {
 
         try {
             const [newsRes, docsRes, knowledgeRes] = await Promise.all([
-                axios.get(`${API_URL_BASE}/search/news?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 2
-                axios.get(`${API_URL_BASE}/search/documents?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 3
-                axios.get(`${API_URL_BASE}/search/knowledge?q=${searchTerm}`) // <-- ИЗМЕНЕНИЕ 4
+                axios.get(`${API_URL}/search/news?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 2
+                axios.get(`${API_URL}/search/documents?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 3
+                axios.get(`${API_URL}/search/knowledge?q=${searchTerm}`) // <-- ИЗМЕНЕНИЕ 4
             ]);
 
             setSearchResults({

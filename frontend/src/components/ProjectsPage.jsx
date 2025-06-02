@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL_BASE } from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
+import { API_URL} from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
 // Удалите или закомментируйте эту строку
 // const API_URL = 'http://localhost:5000/api';
@@ -31,10 +31,10 @@ function ProjectsPage({ user }) {
         setLoading(true);
         setError('');
         try {
-            const currentRes = await axios.get(`${API_URL_BASE}/projects/current`); // <-- ИЗМЕНЕНИЕ 2
+            const currentRes = await axios.get(`${API_URL}/projects/current`); // <-- ИЗМЕНЕНИЕ 2
             setCurrentProjects(currentRes.data);
 
-            const completedRes = await axios.get(`${API_URL_BASE}/projects/completed`); // <-- ИЗМЕНЕНИЕ 3
+            const completedRes = await axios.get(`${API_URL}/projects/completed`); // <-- ИЗМЕНЕНИЕ 3
             setCompletedProjects(completedRes.data);
             setLoading(false);
         } catch (err) {
@@ -63,7 +63,7 @@ function ProjectsPage({ user }) {
         }
 
         try {
-            await axios.post(`${API_URL_BASE}/projects`, formData, { // <-- ИЗМЕНЕНИЕ 4
+            await axios.post(`${API_URL}/projects`, formData, { // <-- ИЗМЕНЕНИЕ 4
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -100,7 +100,7 @@ function ProjectsPage({ user }) {
     const handleDeleteProject = async (id) => {
         if (window.confirm('Вы уверены, что хотите удалить этот проект? Это действие необратимо.')) {
             try {
-                await axios.delete(`${API_URL_BASE}/projects/${id}`); // <-- ИЗМЕНЕНИЕ 6
+                await axios.delete(`${API_URL}/projects/${id}`); // <-- ИЗМЕНЕНИЕ 6
                 alert('Проект успешно удален!');
                 fetchProjects(); // Refresh projects list
             } catch (err) {
@@ -224,7 +224,7 @@ function ProjectsPage({ user }) {
                         <div key={project._id} style={projectCardStyle}>
                             <h4>{project.title}</h4>
                             {project.imageUrl && (
-                                <img src={`${API_URL_BASE.replace('/api', '')}${project.imageUrl}`} alt={project.title} style={imageStyle} /> 
+                                <img src={`${API_URL.replace('/api', '')}${project.imageUrl}`} alt={project.title} style={imageStyle} /> 
                             )}
                             <p><strong>Описание:</strong> {project.description}</p>
                             <p><strong>Сроки:</strong> {new Date(project.startDate).toLocaleDateString()} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Пока нет'}</p>
@@ -261,7 +261,7 @@ function ProjectsPage({ user }) {
                         <div key={project._id} style={{ ...projectCardStyle, opacity: 0.8, backgroundColor: '#e9ecef' }}>
                             <h4>{project.title} (Завершен)</h4>
                             {project.imageUrl && (
-                                <img src={`${API_URL_BASE.replace('/api', '')}${project.imageUrl}`} alt={project.title} style={imageStyle} /> 
+                                <img src={`${API_URL.replace('/api', '')}${project.imageUrl}`} alt={project.title} style={imageStyle} /> 
                             )}
                             <p><strong>Описание:</strong> {project.description}</p>
                             <p><strong>Сроки:</strong> {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}</p>

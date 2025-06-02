@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL_BASE } from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
+import { API_URL} from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
-// Удалите или закомментируйте эту строку
-// const API_URL = 'http://localhost:5000/api';
+
 
 function DocumentLibrary({ user }) { // Принимаем пропс user
     const [documents, setDocuments] = useState([]);
@@ -28,7 +27,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
         setError(null);
         try {
             // GET /api/documents доступен всем
-            const response = await axios.get(`${API_URL_BASE}/documents`); // <-- ИЗМЕНЕНИЕ 2
+            const response = await axios.get(`${API_URL}/documents`); // <-- ИЗМЕНЕНИЕ 2
             setDocuments(response.data);
         } catch (err) {
             console.error('Ошибка при загрузке документов:', err);
@@ -67,7 +66,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
 
         try {
             // POST /api/documents защищен, axios interceptor автоматически добавит токен
-            const response = await axios.post(`${API_URL_BASE}/documents`, formData, { // <-- ИЗМЕНЕНИЕ 3
+            const response = await axios.post(`${API_URL}/documents`, formData, { // <-- ИЗМЕНЕНИЕ 3
                 headers: {
                     'Content-Type': 'multipart/form-data' // Важно для загрузки файлов
                 }
@@ -98,7 +97,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
         if (window.confirm('Вы уверены, что хотите удалить этот документ?')) {
             try {
                 // DELETE /api/documents/:id защищен, axios interceptor автоматически добавит токен
-                await axios.delete(`${API_URL_BASE}/documents/${id}`); // <-- ИЗМЕНЕНИЕ 4
+                await axios.delete(`${API_URL}/documents/${id}`); // <-- ИЗМЕНЕНИЕ 4
                 setDeleteMessage('Документ успешно удален!');
                 fetchDocuments(); // Обновляем список документов
             } catch (err) {
@@ -181,7 +180,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
                             <p style={{ fontSize: '14px', color: '#888' }}>
                                 Загружено: {new Date(item.uploadDate).toLocaleDateString()}
                             </p>
-                            <a href={`${API_URL_BASE}/${item.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '10px', padding: '8px 12px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px' }}> {/* <-- ИЗМЕНЕНИЕ 5 */}
+                            <a href={`${API_URL}/${item.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '10px', padding: '8px 12px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px' }}> {/* <-- ИЗМЕНЕНИЕ 5 */}
                                 Скачать документ
                             </a>
                             {isAdmin && ( // Кнопка удаления (только для админов)

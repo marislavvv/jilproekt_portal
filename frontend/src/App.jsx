@@ -13,7 +13,7 @@ import DepartmentChat from './components/DepartmentChat'; // <-- ИМПОРТИ�
 // import UserProfileComponent from './components/UserProfileComponent';
 // import RequestsDashboard from './components/RequestsDashboard';
 
-export const API_URL_BASE = "https://jilproekt-portal.onrender.com";
+export const API_URL = "https://jilproekt-portal.onrender.com";
 // import.meta.env.VITE_API_URL + '/api';
 
 // --- Компонент Входа/Регистрации ---
@@ -32,9 +32,9 @@ function AuthComponent({ onLoginSuccess }) {
         try {
             let response;
             if (isRegister) {
-                response = await axios.post(`${API_URL}/auth/register`, { employeeId, password, name, position, department });
+                response = await axios.post(`${API_URL}/api/auth/register`, { employeeId, password, name, position, department });
             } else {
-                response = await axios.post(`${API_URL}/auth/login`, { employeeId, password });
+                response = await axios.post(`${API_URL}/api/auth/login`, { employeeId, password });
             }
             localStorage.setItem('token', response.data.token);
             onLoginSuccess(response.data.user || { employeeId, name: name || employeeId, role: response.data.user?.role || 'employee' });
