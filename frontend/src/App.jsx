@@ -13,7 +13,8 @@ import DepartmentChat from './components/DepartmentChat'; // <-- ИМПОРТИ�
 // import UserProfileComponent from './components/UserProfileComponent';
 // import RequestsDashboard from './components/RequestsDashboard';
 
-const API_URL = import.meta.env.VITE_API_URL;
+export const API_URL_BASE = "https://jilproekt-portal.onrender.com";
+// import.meta.env.VITE_API_URL + '/api';
 
 // --- Компонент Входа/Регистрации ---
 function AuthComponent({ onLoginSuccess }) {
