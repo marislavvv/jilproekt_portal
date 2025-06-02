@@ -25,7 +25,7 @@ function KnowledgeBase({ user }) { // Принимаем пропс user
         setError(null);
         try {
             // GET /api/knowledge доступен всем
-            const response = await axios.get(`${API_URL}/knowledge`); // <-- ИЗМЕНЕНИЕ 2
+            const response = await axios.get(`${API_URL}/api/knowledge`); // <-- ИЗМЕНЕНИЕ 2
             setKnowledgeItems(response.data);
         } catch (err) {
             console.error('Ошибка при загрузке статей базы знаний:', err);
@@ -46,7 +46,7 @@ function KnowledgeBase({ user }) { // Принимаем пропс user
         setAddMessage('');
         try {
             // POST /api/knowledge защищен, axios interceptor автоматически добавит токен
-            const response = await axios.post(`${API_URL}/knowledge`, { // <-- ИЗМЕНЕНИЕ 3
+            const response = await axios.post(`${API_URL}/api/knowledge`, { // <-- ИЗМЕНЕНИЕ 3
                 title: newTitle,
                 content: newContent,
                 category: newCategory
@@ -73,7 +73,7 @@ function KnowledgeBase({ user }) { // Принимаем пропс user
         if (window.confirm('Вы уверены, что хотите удалить эту статью?')) {
             try {
                 // DELETE /api/knowledge/:id защищен, axios interceptor автоматически добавит токен
-                await axios.delete(`${API_URL}/knowledge/${id}`); // <-- ИЗМЕНЕНИЕ 4
+                await axios.delete(`${API_URL}/api/knowledge/${id}`); // <-- ИЗМЕНЕНИЕ 4
                 setDeleteMessage('Статья успешно удалена!');
                 fetchKnowledgeItems(); // Обновляем список статей
             } catch (err) {

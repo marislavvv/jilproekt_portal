@@ -24,7 +24,7 @@ function DepartmentChat({ user }) {
             const token = getToken();
             if (token) {
                 try {
-                    const response = await axios.get(`${API_URL}/auth/me`, { // <-- ИЗМЕНЕНИЕ 2
+                    const response = await axios.get(`${API_URL}/api/auth/me`, { // <-- ИЗМЕНЕНИЕ 2
                         headers: { 'x-auth-token': token }
                     });
                     setDepartment(response.data.department);

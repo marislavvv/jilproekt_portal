@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
-// Удалите или закомментируйте эту строку, так как API_URL будет импортироваться
-// const API_URL = 'http://localhost:5000/api';
 
 function NewsFeed({ user }) {
     const [news, setNews] = useState([]);
@@ -25,7 +23,7 @@ function NewsFeed({ user }) {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get(`${API_URL}/news`); // <-- ИЗМЕНЕНИЕ 2: Используем API_URL_BASE
+            const response = await axios.get(`${API_URL}/api/news`); // <-- ИЗМЕНЕНИЕ 2: Используем API_URL_BASE
             setNews(response.data);
             setLoading(false);
         } catch (err) {
@@ -51,7 +49,7 @@ function NewsFeed({ user }) {
         }
 
         try {
-            await axios.post(`${API_URL}/news`, formData, { // <-- ИЗМЕНЕНИЕ 3: Используем API_URL_BASE
+            await axios.post(`${API_URL}/api/news`, formData, { // <-- ИЗМЕНЕНИЕ 3: Используем API_URL_BASE
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -70,7 +68,7 @@ function NewsFeed({ user }) {
     const handleDeleteNews = async (id) => {
         if (window.confirm('Вы уверены, что хотите удалить эту новость?')) {
             try {
-                await axios.delete(`${API_URL}/news/${id}`); // <-- ИЗМЕНЕНИЕ 4: Используем API_URL_BASE
+                await axios.delete(`${API_URL}/api/news/${id}`); // <-- ИЗМЕНЕНИЕ 4: Используем API_URL_BASE
                 alert('Новость успешно удалена!');
                 fetchNews();
             } catch (err) {

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL} from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
-// Удалите или закомментируйте эту строку
-// const API_URL = 'http://localhost:5000/api';
+
 
 function ManagerDashboard({ user }) {
     const [allRequests, setAllRequests] = useState([]);
@@ -17,7 +16,7 @@ function ManagerDashboard({ user }) {
     const fetchAllRequests = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_URL}/requests/all`); // <-- ИЗМЕНЕНИЕ 2
+            const response = await axios.get(`${API_URL}/api/requests/all`); // <-- ИЗМЕНЕНИЕ 2
             setAllRequests(response.data);
             setError(null);
         } catch (err) {
@@ -31,7 +30,7 @@ function ManagerDashboard({ user }) {
 
     const handleUpdateRequestStatus = async (requestId, newStatus) => {
         try {
-            await axios.put(`${API_URL}/requests/${requestId}/status`, { status: newStatus }); // <-- ИЗМЕНЕНИЕ 3
+            await axios.put(`${API_URL}/api/requests/${requestId}/status`, { status: newStatus }); // <-- ИЗМЕНЕНИЕ 3
             alert(`Статус заявки ${requestId} обновлен на "${newStatus}"`);
             fetchAllRequests(); // Обновить список заявок
         } catch (err) {

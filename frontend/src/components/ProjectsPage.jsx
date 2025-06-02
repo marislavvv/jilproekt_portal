@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL} from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
-// Удалите или закомментируйте эту строку
-// const API_URL = 'http://localhost:5000/api';
+
 
 function ProjectsPage({ user }) {
     const [currentProjects, setCurrentProjects] = useState([]);
@@ -31,10 +30,10 @@ function ProjectsPage({ user }) {
         setLoading(true);
         setError('');
         try {
-            const currentRes = await axios.get(`${API_URL}/projects/current`); // <-- ИЗМЕНЕНИЕ 2
+            const currentRes = await axios.get(`${API_URL}/api/projects/current`); // <-- ИЗМЕНЕНИЕ 2
             setCurrentProjects(currentRes.data);
 
-            const completedRes = await axios.get(`${API_URL}/projects/completed`); // <-- ИЗМЕНЕНИЕ 3
+            const completedRes = await axios.get(`${API_URL}/api/projects/completed`); // <-- ИЗМЕНЕНИЕ 3
             setCompletedProjects(completedRes.data);
             setLoading(false);
         } catch (err) {
@@ -63,7 +62,7 @@ function ProjectsPage({ user }) {
         }
 
         try {
-            await axios.post(`${API_URL}/projects`, formData, { // <-- ИЗМЕНЕНИЕ 4
+            await axios.post(`${API_URL}/api/projects`, formData, { // <-- ИЗМЕНЕНИЕ 4
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -87,7 +86,7 @@ function ProjectsPage({ user }) {
     const handleCompleteProject = async (id) => {
         if (window.confirm('Вы уверены, что хотите отметить этот проект как завершенный?')) {
             try {
-                await axios.put(`${API_URL_BASE}/projects/${id}/complete`); // <-- ИЗМЕНЕНИЕ 5
+                await axios.put(`${API_URL_BASE}/api/projects/${id}/complete`); // <-- ИЗМЕНЕНИЕ 5
                 alert('Проект отмечен как завершенный!');
                 fetchProjects(); // Refresh projects list
             } catch (err) {
@@ -100,7 +99,7 @@ function ProjectsPage({ user }) {
     const handleDeleteProject = async (id) => {
         if (window.confirm('Вы уверены, что хотите удалить этот проект? Это действие необратимо.')) {
             try {
-                await axios.delete(`${API_URL}/projects/${id}`); // <-- ИЗМЕНЕНИЕ 6
+                await axios.delete(`${API_URL}/api/projects/${id}`); // <-- ИЗМЕНЕНИЕ 6
                 alert('Проект успешно удален!');
                 fetchProjects(); // Refresh projects list
             } catch (err) {

@@ -27,7 +27,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
         setError(null);
         try {
             // GET /api/documents доступен всем
-            const response = await axios.get(`${API_URL}/documents`); // <-- ИЗМЕНЕНИЕ 2
+            const response = await axios.get(`${API_URL}/api/documents`); // <-- ИЗМЕНЕНИЕ 2
             setDocuments(response.data);
         } catch (err) {
             console.error('Ошибка при загрузке документов:', err);
@@ -66,7 +66,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
 
         try {
             // POST /api/documents защищен, axios interceptor автоматически добавит токен
-            const response = await axios.post(`${API_URL}/documents`, formData, { // <-- ИЗМЕНЕНИЕ 3
+            const response = await axios.post(`${API_URL}/api/documents`, formData, { // <-- ИЗМЕНЕНИЕ 3
                 headers: {
                     'Content-Type': 'multipart/form-data' // Важно для загрузки файлов
                 }
@@ -97,7 +97,7 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
         if (window.confirm('Вы уверены, что хотите удалить этот документ?')) {
             try {
                 // DELETE /api/documents/:id защищен, axios interceptor автоматически добавит токен
-                await axios.delete(`${API_URL}/documents/${id}`); // <-- ИЗМЕНЕНИЕ 4
+                await axios.delete(`${API_URL}/api/documents/${id}`); // <-- ИЗМЕНЕНИЕ 4
                 setDeleteMessage('Документ успешно удален!');
                 fetchDocuments(); // Обновляем список документов
             } catch (err) {

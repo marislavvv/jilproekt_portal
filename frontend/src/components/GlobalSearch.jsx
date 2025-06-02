@@ -27,9 +27,9 @@ function GlobalSearch({ onNavigateToPage }) {
 
         try {
             const [newsRes, docsRes, knowledgeRes] = await Promise.all([
-                axios.get(`${API_URL}/search/news?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 2
-                axios.get(`${API_URL}/search/documents?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 3
-                axios.get(`${API_URL}/search/knowledge?q=${searchTerm}`) // <-- ИЗМЕНЕНИЕ 4
+                axios.get(`${API_URL}/api/search/news?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 2
+                axios.get(`${API_URL}/api/search/documents?q=${searchTerm}`), // <-- ИЗМЕНЕНИЕ 3
+                axios.get(`${API_URL}/api/search/knowledge?q=${searchTerm}`) // <-- ИЗМЕНЕНИЕ 4
             ]);
 
             setSearchResults({
