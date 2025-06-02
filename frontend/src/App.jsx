@@ -109,7 +109,7 @@ function App() {
 
         const token = localStorage.getItem('token');
         if (token) {
-            axios.get(`${API_URL}/auth/me`)
+            axios.get(`${API_URL}/api/auth/me`)
                 .then(res => {
                     setUser(res.data);
                     setLoading(false);
@@ -227,7 +227,7 @@ function OnlineRequests({ user }) {
 
     const fetchMyRequests = async () => {
         try {
-            const response = await axios.get(`${API_URL}/requests/me`);
+            const response = await axios.get(`${API_URL}api/requests/me`);
             setMyRequests(response.data);
         } catch (error) {
             console.error('Ошибка при загрузке моих заявок:', error);
@@ -242,7 +242,7 @@ function OnlineRequests({ user }) {
             requestData.endDate = endDate;
         }
         try {
-            await axios.post(`${API_URL}/requests`, requestData);
+            await axios.post(`${API_URL}/api/requests`, requestData);
             alert('Заявка успешно отправлена!');
             setType('Отпуск');
             setDetails('');
@@ -329,7 +329,7 @@ function UserProfileComponent({ user }) {
 
     const fetchProfile = async () => {
         try {
-            const response = await axios.get(`${API_URL}/profile/me`);
+            const response = await axios.get(`${API_URL}/api/profile/me`);
             setProfile(response.data);
         } catch (error) {
             console.error('Ошибка при загрузке профиля:', error);
@@ -339,7 +339,7 @@ function UserProfileComponent({ user }) {
 
     const fetchMyRequests = async () => {
         try {
-            const response = await axios.get(`${API_URL}/requests/me`);
+            const response = await axios.get(`${API_URL}/api/requests/me`);
             setMyRequests(response.data);
         } catch (error) {
             console.error('Ошибка при загрузке моих заявок в профиле:', error);
@@ -351,7 +351,7 @@ function UserProfileComponent({ user }) {
         setLoadingAllRequests(true);
         setAllRequestsError('');
         try {
-            const response = await axios.get(`${API_URL}/requests/all`);
+            const response = await axios.get(`${API_URL}/api/requests/all`);
             setAllSystemRequests(response.data);
             setLoadingAllRequests(false);
         } catch (error) {
@@ -456,7 +456,7 @@ function RequestsDashboard({ user }) {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get(`${API_URL}/requests/all`);
+            const response = await axios.get(`${API_URL}/api/requests/all`);
             setAllRequests(response.data);
             const initialStatuses = {};
             const initialAssignedTo = {};
@@ -476,7 +476,7 @@ function RequestsDashboard({ user }) {
 
     const handleStatusChange = async (requestId, newStatus) => {
         try {
-            await axios.put(`${API_URL}/requests/${requestId}/status`, { status: newStatus });
+            await axios.put(`${API_URL}/api/requests/${requestId}/status`, { status: newStatus });
             setSelectedStatus(prev => ({ ...prev, [requestId]: newStatus }));
             alert('Статус заявки обновлен!');
         } catch (err) {
@@ -487,7 +487,7 @@ function RequestsDashboard({ user }) {
 
     const handleAssignedToChange = async (requestId, newAssignedTo) => {
         try {
-            await axios.put(`${API_URL}/requests/${requestId}/status`, { assignedTo: newAssignedTo });
+            await axios.put(`${API_URL}/api/requests/${requestId}/status`, { assignedTo: newAssignedTo });
             setAssignedTo(prev => ({ ...prev, [requestId]: newAssignedTo }));
             alert('Исполнитель заявки обновлен!');
         } catch (err) {
