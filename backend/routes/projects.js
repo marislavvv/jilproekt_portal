@@ -2,18 +2,20 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const authorize = require('../middleware/authorize'); // <-- Добавил импорт
 const Project = require('../models/Project');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs'); // Для удаления файлов
 
 // Создаем директорию для загрузок, если ее нет
+// ! ВНИМАНИЕ: Это не будет надежно работать на Render. Рекомендуется использовать Cloudinary/AWS S3
 const UPLOADS_DIR = path.join(__dirname, '../uploads/projects');
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Настройка Multer для сохранения файлов
+// Настройка Multer для сохранения файлов на диск
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, UPLOADS_DIR);
@@ -42,17 +44,24 @@ const upload = multer({
 // @route   POST api/projects
 // @desc    Создать новый проект (только для менеджера/админа)
 // @access  Private
-router.post('/', auth, (req, res) => {
+router.post('/', auth, authorize(['manager', 'admin']), (req, res) => { // <-- Использовал authorize middleware
     upload(req, res, async (err) => {
         if (err) {
-            return res.status(400).json({ msg: err });
-        }
-
-        if (req.user.role !== 'manager' && req.user.role !== 'admin') {
-            return res.status(403).json({ msg: 'Доступ запрещен: Только менеджеры или администраторы могут создавать проекты.' });
+            // MulterError или ошибка фильтрации файла
+            return res.status(400).json({ msg: err.message || err }); // Возвращаем сообщение об ошибке Multer
         }
 
         const { title, description, startDate, endDate, departments } = req.body;
+
+        // Если файл не был загружен, но должен был быть (например, если поле пустое)
+        if (!req.file) {
+            // Если imageUrl не является обязательным полем в вашей модели,
+            // то можно разрешить создание проекта без изображения.
+            // Но если изображение ожидается, то это ошибка.
+            // Например: return res.status(400).json({ msg: 'Изображение проекта обязательно.' });
+            // Для гибкости, оставим imageUrl как undefined если файл не загружен
+        }
+
 
         try {
             const newProject = new Project({
@@ -60,7 +69,7 @@ router.post('/', auth, (req, res) => {
                 description,
                 startDate,
                 endDate: endDate || null, // Если endDate не передан, устанавливаем null
-                departments: Array.isArray(departments) ? departments : departments.split(',').map(d => d.trim()),
+                departments: Array.isArray(departments) ? departments : (departments ? departments.split(',').map(d => d.trim()) : []), // Улучшенная обработка departments
                 imageUrl: req.file ? `/uploads/projects/${req.file.filename}` : undefined // Путь к изображению
             });
 
@@ -102,11 +111,7 @@ router.get('/completed', auth, async (req, res) => {
 // @route   PUT api/projects/:id/complete
 // @desc    Отметить проект как завершенный (только для менеджера/админа)
 // @access  Private
-router.put('/:id/complete', auth, async (req, res) => {
-    if (req.user.role !== 'manager' && req.user.role !== 'admin') {
-        return res.status(403).json({ msg: 'Доступ запрещен: Только менеджеры или администраторы могут изменять статус проектов.' });
-    }
-
+router.put('/:id/complete', auth, authorize(['manager', 'admin']), async (req, res) => { // <-- Использовал authorize middleware
     try {
         let project = await Project.findById(req.params.id);
 
@@ -131,11 +136,7 @@ router.put('/:id/complete', auth, async (req, res) => {
 // @route   DELETE api/projects/:id
 // @desc    Удалить проект (только для админа)
 // @access  Private
-router.delete('/:id', auth, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ msg: 'Доступ запрещен: Только администраторы могут удалять проекты.' });
-    }
-
+router.delete('/:id', auth, authorize(['admin']), async (req, res) => { // <-- Использовал authorize middleware
     try {
         const project = await Project.findById(req.params.id);
 

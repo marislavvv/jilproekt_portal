@@ -47,6 +47,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json()); // Позволяет Express парсить JSON-тела запросов
+app.use('/api/documents', require('./routes/documents'));
 
 // --- НАСТРОЙКА ХРАНИЛИЩА MULTER ДЛЯ CLOUDINARY (ЗАМЕНА diskStorage) ---
 
@@ -537,7 +538,7 @@ app.get('/api/documents', async (req, res) => {
     }
 });
 
-app.post('/api/documents', auth, authorizeManager, uploadDocument.single('file'), async (req, res) => {
+app.post('/api/documents', auth, authorizeManager, uploadDocument.single('documentFile'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Файл не был загружен.' });
     }
