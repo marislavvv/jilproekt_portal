@@ -892,7 +892,9 @@ const cloudinaryDocumentStorage = new CloudinaryStorage({
     params: {
         folder: 'jilproekt_documents', // Папка в Cloudinary для документов
         resource_type: 'raw', // Важно для не-изображений (PDF, DOCX и т.д.)
-        public_id: (req, file) => `document-${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`
+        public_id: (req, file) => { // Если вы хотите контролировать public_id
+            const filename = file.originalname.split('.')[0];
+            return `document-${Date.now()}-${filename}`;}
     }
 });
 const uploadDocument = multer({ storage: cloudinaryDocumentStorage });
