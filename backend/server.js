@@ -47,7 +47,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json()); // Позволяет Express парсить JSON-тела запросов
-app.use('/api/documents', require('./routes/documents'));
+app.use('/api/documents', require('./routes/documents')(auth, authorizeManager, authorizeAdmin, uploadDocument, cloudinary));
 
 // --- НАСТРОЙКА ХРАНИЛИЩА MULTER ДЛЯ CLOUDINARY (ЗАМЕНА diskStorage) ---
 

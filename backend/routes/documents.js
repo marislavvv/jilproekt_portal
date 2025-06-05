@@ -1,107 +1,78 @@
 // backend/routes/documents.js
 const express = require('express');
-const router = express.Router();
-const auth = require('../middleware/auth');
-const authorize = require('../middleware/authorize');
-const Document = require('../models/Document'); // Убедитесь, что у вас есть такая модель
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('cloudinary').v2;
+const Document = require('../models/Document'); // Вам нужно будет импортировать модель Document
+// Возможно, вам придется импортировать Cloudinary здесь, если он используется в этом файле
+// const cloudinary = require('cloudinary').v2; // Или передать его из server.js
 
-// Настройка Cloudinary (убедитесь, что переменные окружения установлены на Render)
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
+module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudinary) => { // Принимаем функции
+    const router = express.Router();
 
-// Настройка CloudinaryStorage для документов
-const storageDocuments = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'jilproekt_documents', // Папка в Cloudinary для ваших документов
-        resource_type: 'raw', // Важно для файлов, которые не являются изображениями (pdf, docx и т.д.)
-        format: async (req, file) => file.mimetype.split('/')[1] || 'bin' // Получаем расширение из mimetype или 'bin'
-    }
-});
-
-const uploadDocument = multer({ storage: storageDocuments });
-
-// @route   POST api/documents
-// @desc    Загрузить новый документ (только для менеджера/админа)
-// @access  Private
-router.post(
-    '/',
-    auth,
-    authorize(['manager', 'admin']),
-    uploadDocument.single('documentFile'), // <-- Multer ожидает поле с именем 'documentFile'
-    async (req, res) => {
+    // Пример роута для документов, использующего переданные middleware
+    router.get('/', auth, async (req, res) => {
         try {
-            if (!req.file) {
-                return res.status(400).json({ msg: 'Файл документа не загружен или имеет недопустимый тип.' });
+            const documents = await Document.find().sort({ uploadDate: -1 });
+            res.json(documents);
+        } catch (err) {
+            res.status(500).json({ message: err.message });
+        }
+    });
+
+    router.post('/', auth, authorizeManager, uploadDocument.single('documentFile'), async (req, res) => {
+        // Весь код вашего POST /api/documents роута
+        if (!req.file) {
+            return res.status(400).json({ message: 'Файл не был загружен.' });
+        }
+
+        const { title, description, category } = req.body;
+        const fileUrl = req.file.path;
+        const publicId = req.file.filename;
+
+        const newDocument = new Document({
+            title,
+            description,
+            category,
+            fileUrl,
+            publicId
+        });
+
+        try {
+            const savedDocument = await newDocument.save();
+            res.status(201).json({ message: 'Документ успешно загружен и добавлен.', document: savedDocument });
+        } catch (err) {
+            if (req.file && req.file.filename) {
+                cloudinary.uploader.destroy(req.file.filename, { resource_type: 'raw' }, (destroyError, destroyResult) => {
+                    if (destroyError) console.error('Ошибка при удалении файла из Cloudinary после ошибки БД:', destroyError);
+                    console.log('Результат удаления из Cloudinary:', destroyResult);
+                });
+            }
+            console.error('Ошибка при сохранении документа в БД:', err);
+            res.status(400).json({ message: err.message });
+        }
+    });
+
+    router.delete('/:id', auth, authorizeAdmin, async (req, res) => {
+        // Весь код вашего DELETE /api/documents/:id роута
+        try {
+            const documentItem = await Document.findById(req.params.id);
+            if (!documentItem) {
+                return res.status(404).json({ message: 'Документ не найден' });
             }
 
-            const { title, description, category } = req.body;
+            if (documentItem.publicId) {
+                cloudinary.uploader.destroy(documentItem.publicId, { resource_type: 'raw' }, (error, result) => {
+                    if (error) console.error('Ошибка при удалении файла документа из Cloudinary:', error);
+                    console.log('Результат удаления из Cloudinary:', result);
+                });
+            }
 
-            // Создание нового документа в MongoDB
-            const newDocument = new Document({
-                title,
-                description,
-                category,
-                fileUrl: req.file.path,     // URL файла на Cloudinary
-                publicId: req.file.filename, // Public ID для Cloudinary (для удаления)
-                uploadedBy: req.user.id,     // ID пользователя из JWT токена
-                uploadedAt: new Date()       // Дата загрузки
-            });
-
-            const document = await newDocument.save();
-            res.status(201).json({ message: 'Документ успешно загружен!', document });
+            await Document.findByIdAndDelete(req.params.id);
+            res.json({ message: 'Документ успешно удален' });
         } catch (err) {
-            console.error('Ошибка при загрузке документа:', err.message);
-            res.status(500).json({ msg: 'Ошибка сервера при загрузке документа.' });
+            console.error('Ошибка при удалении документа:', err);
+            res.status(500).json({ message: 'Ошибка сервера при удалении документа' });
         }
-    }
-);
-
-// @route   GET api/documents
-// @desc    Получить все документы
-// @access  Private (можно сделать публичным, если документы доступны всем без авторизации)
-router.get('/', auth, async (req, res) => {
-    try {
-        const documents = await Document.find().sort({ uploadedAt: -1 });
-        res.json(documents);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Ошибка сервера');
-    }
-});
-
-// @route   DELETE api/documents/:id
-// @desc    Удалить документ (только для админа)
-// @access  Private
-router.delete('/:id', auth, authorize(['admin']), async (req, res) => {
-    try {
-        const document = await Document.findById(req.params.id);
-
-        if (!document) {
-            return res.status(404).json({ msg: 'Документ не найден' });
-        }
-
-        // Удаляем файл из Cloudinary
-        if (document.publicId) {
-            await cloudinary.uploader.destroy(document.publicId, { resource_type: 'raw' });
-        }
-
-        await Document.deleteOne({ _id: req.params.id });
-        res.json({ msg: 'Документ удален' });
-    } catch (err) {
-        console.error(err.message);
-        if (err.kind === 'ObjectId') {
-            return res.status(404).json({ msg: 'Документ не найден' });
-        }
-        res.status(500).send('Ошибка сервера');
-    }
-});
+    });
 
 
-module.exports = router;
+    return router;
+};
