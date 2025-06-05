@@ -10,7 +10,6 @@ module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudi
     // Роут для получения всех документов
     router.get('/', auth, async (req, res) => {
         try {
-            // Убедитесь, что 'uploadDate' используется в вашей схеме Document
             const documents = await Document.find().sort({ uploadDate: -1 });
             res.json(documents);
         } catch (err) {
@@ -25,27 +24,24 @@ module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudi
             return res.status(400).json({ message: 'Файл не был загружен.' });
         }
 
-        // --- ВАЖНОЕ ДОБАВЛЕНИЕ ДЛЯ ОТЛАДКИ ---
-        // Вывод всех данных, которые Multer-Cloudinary возвращает в req.file
-        console.log('Данные req.file после загрузки Cloudinary:', req.file);
-        // --- КОНЕЦ ОТЛАДКИ ---
+        console.log('Данные req.file после загрузки Cloudinary:', req.file); // Для отладки
 
         const { title, description, category } = req.body;
 
-        // ИСПРАВЛЕНИЕ: Используйте правильные свойства из req.file,
-        // которые предоставляет `multer-storage-cloudinary`
-        const fileUrl = req.file.secure_url; // Полный HTTPS URL файла на Cloudinary
-        const publicId = req.file.public_id; // Public ID файла на Cloudinary (включает путь и имя)
-        const originalFileName = req.file.originalname; // Оригинальное имя файла, загруженное пользователем (например, "отчет.pdf")
+        // ИСПРАВЛЕНИЕ ЗДЕСЬ: используем req.file.path вместо req.file.secure_url
+        const fileUrl = req.file.path; // Используем 'path', так как 'secure_url' отсутствует в логе
+        const publicId = req.file.filename; // Используем 'filename' для publicId, как видно из лога
+        const originalFileName = req.file.originalname; // Оригинальное имя файла, загруженное пользователем
+        const fileExtension = originalFileName.split('.').pop().toLowerCase(); // Извлекаем расширение
 
         // Проверяем, что необходимые данные получены
+        // Теперь проверяем fileUrl (который теперь path)
         if (!fileUrl) {
-            console.error('Ошибка: Cloudinary не вернул secure_url. Объект req.file:', req.file);
-            // Если secure_url пуст, это может быть из-за проблем с ключами Cloudinary или их настройками.
+            console.error('Ошибка: Cloudinary не вернул URL файла (path). Объект req.file:', req.file);
             return res.status(500).json({ message: 'Не удалось получить URL файла от Cloudinary.' });
         }
         if (!publicId) {
-            console.error('Ошибка: Cloudinary не вернул public_id. Объект req.file:', req.file);
+            console.error('Ошибка: Cloudinary не вернул public_id (filename). Объект req.file:', req.file);
             return res.status(500).json({ message: 'Не удалось получить Public ID файла от Cloudinary.' });
         }
         if (!originalFileName) {
@@ -53,20 +49,16 @@ module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudi
             return res.status(500).json({ message: 'Не удалось получить оригинальное имя файла.' });
         }
 
-        // Извлекаем расширение из originalFileName
-        const fileExtension = originalFileName.split('.').pop().toLowerCase();
-
         const newDocument = new Document({
             title,
             description,
             category,
-            fileUrl,
-            publicId,
-            originalFileName, // СОХРАНЯЕМ ОРИГИНАЛЬНОЕ ИМЯ
-            fileExtension,    // СОХРАНЯЕМ РАСШИРЕНИЕ
-            uploadDate: new Date(), // Время загрузки документа
-            // Добавьте uploadedBy, если это поле есть в вашей схеме и `req.user` доступен
-            // uploadedBy: req.user.id
+            fileUrl, // Будет полным URL из `path`
+            publicId, // Будет publicId из `filename`
+            originalFileName, // Оригинальное имя с расширением
+            fileExtension,    // Расширение
+            uploadDate: new Date(),
+            // uploadedBy: req.user.id // Раскомментируйте, если используете
         });
 
         try {
@@ -74,14 +66,13 @@ module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudi
             res.status(201).json({ message: 'Документ успешно загружен и добавлен.', document: savedDocument });
         } catch (err) {
             // Если произошла ошибка при сохранении в БД, пытаемся удалить файл с Cloudinary
-            if (publicId) { // Используем publicId для удаления
+            if (publicId) {
                 cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }, (destroyError, destroyResult) => {
                     if (destroyError) console.error('Ошибка при удалении файла из Cloudinary после ошибки БД:', destroyError);
                     console.log('Результат удаления из Cloudinary:', destroyResult);
                 });
             }
             console.error('Ошибка при сохранении документа в БД:', err);
-            // Возвращаем ошибку валидации, если она есть
             res.status(400).json({ message: err.message || 'Ошибка при сохранении документа.' });
         }
     });
@@ -94,7 +85,6 @@ module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudi
                 return res.status(404).json({ message: 'Документ не найден' });
             }
 
-            // Удаляем файл из Cloudinary, если publicId существует
             if (documentItem.publicId) {
                 cloudinary.uploader.destroy(documentItem.publicId, { resource_type: 'raw' }, (error, result) => {
                     if (error) console.error('Ошибка при удалении файла документа из Cloudinary:', error);
