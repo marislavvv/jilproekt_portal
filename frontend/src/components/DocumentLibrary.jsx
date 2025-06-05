@@ -1,6 +1,7 @@
+// frontend/src/components/DocumentLibrary.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL} from '../App'; // Импортируем базовый URL из App.jsx
+import { API_URL } from '../App'; // <-- ИЗМЕНЕНИЕ 1: Импортируем базовый URL из App.jsx
 
 function DocumentLibrary({ user }) { // Принимаем пропс user
     const [documents, setDocuments] = useState([]);
@@ -24,13 +25,8 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
         setLoading(true);
         setError(null);
         try {
-            // GET /api/documents доступен всем, но для аутентифицированных запросов всегда лучше отправить токен
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/api/documents`, {
-                headers: {
-                    'x-auth-token': token // Добавляем токен для всех запросов API
-                }
-            });
+            // GET /api/documents доступен всем
+            const response = await axios.get(`${API_URL}/api/documents`); // <-- ИЗМЕНЕНИЕ 2
             setDocuments(response.data);
         } catch (err) {
             console.error('Ошибка при загрузке документов:', err);
@@ -60,20 +56,20 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
             return;
         }
 
-        const token = localStorage.getItem('token'); // Получаем токен
-
         // Создаем FormData для отправки файла и других полей формы
         const formData = new FormData();
         formData.append('title', newTitle);
         formData.append('description', newDescription);
         formData.append('category', newCategory);
+        // ИСПРАВЛЕНИЕ ЗДЕСЬ: имя поля должно соответствовать тому, что ожидает multer на бэкенде
+        // В вашем documents.js это 'documentFile', а не 'file'
         formData.append('documentFile', newFile); // 'documentFile' - это имя поля, которое ожидает multer на бэкенде
 
         try {
-            const response = await axios.post(`${API_URL}/api/documents`, formData, {
+            // POST /api/documents защищен, axios interceptor автоматически добавит токен
+            const response = await axios.post(`${API_URL}/api/documents`, formData, { // <-- ИЗМЕНЕНИЕ 3
                 headers: {
-                    'Content-Type': 'multipart/form-data', // Важно для загрузки файлов
-                    'x-auth-token': token // Явно добавляем токен
+                    'Content-Type': 'multipart/form-data' // Важно для загрузки файлов
                 }
             });
             setAddMessage(response.data.message || 'Документ успешно добавлен!');
@@ -101,12 +97,8 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
         setDeleteMessage('');
         if (window.confirm('Вы уверены, что хотите удалить этот документ?')) {
             try {
-                const token = localStorage.getItem('token'); // Получаем токен
-                await axios.delete(`${API_URL}/api/documents/${id}`, {
-                    headers: {
-                        'x-auth-token': token // Явно добавляем токен
-                    }
-                });
+                // DELETE /api/documents/:id защищен, axios interceptor автоматически добавит токен
+                await axios.delete(`${API_URL}/api/documents/${id}`); // <-- ИЗМЕНЕНИЕ 4
                 setDeleteMessage('Документ успешно удален!');
                 fetchDocuments(); // Обновляем список документов
             } catch (err) {
@@ -187,10 +179,16 @@ function DocumentLibrary({ user }) { // Принимаем пропс user
                             {item.category && <p style={{ fontSize: '14px', color: '#555' }}>Категория: {item.category}</p>}
                             {item.description && <p>{item.description}</p>}
                             <p style={{ fontSize: '14px', color: '#888' }}>
-                                Загружено: {new Date(item.uploadedAt).toLocaleDateString()} {/* ИСПРАВЛЕНО: с uploadDate на uploadedAt */}
+                                Загружено: {new Date(item.uploadDate).toLocaleDateString()} {/* ИСПРАВЛЕНО: с uploadedAt на uploadDate, если в БД так */}
                             </p>
-                            {/* ИСПРАВЛЕНИЕ: Используем item.fileUrl напрямую */}
-                            <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '10px', padding: '8px 12px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px' }}>
+                            {/* ИСПРАВЛЕНИЕ ЗДЕСЬ: Убираем API_URL/ и добавляем атрибут download */}
+                            <a
+                                href={item.fileUrl} // item.fileUrl ДОЛЖЕН быть полным URL от Cloudinary
+                                target="_blank"
+                                download={item.originalFileName} // Атрибут download заставит браузер скачивать файл
+                                rel="noopener noreferrer"
+                                style={{ display: 'inline-block', marginTop: '10px', padding: '8px 12px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '5px' }}
+                            >
                                 Скачать документ
                             </a>
                             {isAdmin && ( // Кнопка удаления (только для админов)
