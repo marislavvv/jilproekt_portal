@@ -38,20 +38,6 @@ const io = new Server(server, {
     }
 });
 
-
-
-// --- Промежуточное ПО (Middleware) ---
-app.use(cors({
-    origin: allowedOrigin,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
-}));
-app.use(express.json()); // Позволяет Express парсить JSON-тела запросов
-app.use('/api/documents', require('./routes/documents')(auth, authorizeManager, authorizeAdmin, uploadDocument, cloudinary));
-
-// --- НАСТРОЙКА ХРАНИЛИЩА MULTER ДЛЯ CLOUDINARY (ЗАМЕНА diskStorage) ---
-
-// Настройка хранилища Multer для загрузки файлов документов в Cloudinary
 const cloudinaryDocumentStorage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
@@ -85,6 +71,20 @@ const uploadProjectImage = multer({
         cb('Ошибка: Поддерживаются только изображения (jpeg, jpg, png, gif, webp)!');
     }
 }).single('projectImage');
+// --- Промежуточное ПО (Middleware) ---
+app.use(cors({
+    origin: allowedOrigin,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
+app.use(express.json()); // Позволяет Express парсить JSON-тела запросов
+app.use('/api/documents', require('./routes/documents')(auth, authorizeManager, authorizeAdmin, uploadDocument, cloudinary));
+
+// --- НАСТРОЙКА ХРАНИЛИЩА MULTER ДЛЯ CLOUDINARY (ЗАМЕНА diskStorage) ---
+
+// Настройка хранилища Multer для загрузки файлов документов в Cloudinary
+
+
 
 // Настройка хранилища Multer для загрузки файлов изображений новостей в Cloudinary
 const cloudinaryNewsImageStorage = new CloudinaryStorage({
