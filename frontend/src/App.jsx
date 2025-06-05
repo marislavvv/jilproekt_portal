@@ -8,10 +8,7 @@ import GlobalSearch from './components/GlobalSearch';
 import ProjectsPage from './components/ProjectsPage';
 import DepartmentChat from './components/DepartmentChat'; // <-- ИМПОРТИРУЕМ КОМПОНЕНТ ЧАТА
 
-// It seems UserProfileComponent and RequestsDashboard are defined in this same file.
-// If they were separate files, you would import them like:
-// import UserProfileComponent from './components/UserProfileComponent';
-// import RequestsDashboard from './components/RequestsDashboard';
+
 
 export const API_URL = "https://jilproekt-portal.onrender.com";
 // import.meta.env.VITE_API_URL + '/api';

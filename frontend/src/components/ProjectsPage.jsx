@@ -84,17 +84,42 @@ function ProjectsPage({ user }) {
     };
 
     const handleCompleteProject = async (id) => {
-        if (window.confirm('Вы уверены, что хотите отметить этот проект как завершенный?')) {
-            try {
-                await axios.put(`${API_URL_BASE}/api/projects/${id}/complete`); // <-- ИЗМЕНЕНИЕ 5
-                alert('Проект отмечен как завершенный!');
-                fetchProjects(); // Refresh projects list
-            } catch (err) {
-                console.error('Ошибка при завершении проекта:', err.response?.data || err);
-                alert(err.response?.data?.msg || 'Ошибка при завершении проекта.');
-            }
-        }
-    };
+    if (window.confirm('Вы уверены, что хотите отметить этот проект как завершенный?')) {
+        try {
+            const token = localStorage.getItem('token'); // Получаем токен из localStorage
+            if (!token) {
+                alert('Для выполнения этого действия требуется авторизация. Пожалуйста, войдите в систему.');
+                return; // Прекращаем выполнение функции, если токена нет
+            }
+
+            await axios.put(
+                `${API_URL}/api/projects/${id}/complete`, // URL
+                {}, // Пустой объект как тело запроса (обязательно для PUT, если нет данных)
+                { // Объект конфигурации с заголовками
+                    headers: {
+                        'x-auth-token': token // Добавляем токен авторизации
+                    }
+                }
+            );
+            alert('Проект отмечен как завершенный!');
+            fetchProjects(); // Обновляем списки проектов после успешного завершения
+        } catch (err) {
+            console.error('Ошибка при завершении проекта:', err.response?.data || err);
+            // Улучшенное сообщение об ошибке для пользователя
+            let errorMessage = 'Ошибка при завершении проекта.';
+            if (err.response) {
+                if (err.response.status === 401) {
+                    errorMessage = 'Вы не авторизованы для выполнения этого действия. Пожалуйста, войдите в систему.';
+                } else if (err.response.status === 403) {
+                    errorMessage = 'У вас нет прав для выполнения этого действия (только менеджеры и администраторы).';
+                } else if (err.response.data && err.response.data.msg) {
+                    errorMessage = err.response.data.msg;
+                }
+            }
+            alert(errorMessage);
+        }
+    }
+};
 
     const handleDeleteProject = async (id) => {
         if (window.confirm('Вы уверены, что хотите удалить этот проект? Это действие необратимо.')) {

@@ -7,130 +7,117 @@ const bcrypt = require('bcryptjs'); // Для хеширования парол�
 const jwt = require('jsonwebtoken'); // Для создания JWT
 const multer = require('multer'); // Для загрузки файлов
 const path = require('path'); // Для работы с путями файлов
-const fs = require('fs'); // Для работы с файловой системой (например, для удаления файлов)
-const http = require('http'); // НОВОЕ: Импортируем модуль http
-const { Server } = require('socket.io'); // НОВОЕ: Импортируем Server из socket.io
+const fs = require('fs'); // Для работы с файловой системой (например, для удаления файлов) - *НЕ БУДЕТ ИСПОЛЬЗОВАТЬСЯ НА RENDER ДЛЯ ЗАГРУЗОК*
+const http = require('http'); // Импортируем модуль http
+const { Server } = require('socket.io'); // Импортируем Server из socket.io
+
+// --- НОВЫЕ ИМПОРТЫ ДЛЯ CLOUDINARY ---
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+// --- КОНЕЦ НОВЫХ ИМПОРТОВ ---
 
 const app = express();
-// НОВОЕ: Создаем HTTP-сервер из нашего Express-приложения
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000; // Порт для бэкенда, по умолчанию 5000
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/jilproekt_db';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_please_change_this_in_production';
 
 // Определяем разрешенный источник для CORS
-// Теперь FRONTEND_URL из .env будет использоваться, если он есть,
-// иначе по умолчанию будет 'http://localhost:5173'
 const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // НОВОЕ: Инициализируем Socket.IO и привязываем его к HTTP-серверу
 const io = new Server(server, {
     cors: {
-        origin: allowedOrigin, // <-- ИЗМЕНЕНО: Используем переменную allowedOrigin
+        origin: allowedOrigin,
         methods: ["GET", "POST"],
-        credentials: true // Важно для передачи токенов
+        credentials: true
     }
 });
 
+
+
 // --- Промежуточное ПО (Middleware) ---
-// Разрешаем запросы с фронтенда для обычных HTTP-запросов (axios)
 app.use(cors({
-  origin: allowedOrigin, // <-- ИЗМЕНЕНО: Используем переменную allowedOrigin
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true // Важно для передачи куки и заголовков авторизации
+    origin: allowedOrigin,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
 }));
 app.use(express.json()); // Позволяет Express парсить JSON-тела запросов
 
-// Настройка хранилища Multer для загрузки файлов документов
-const documentStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = 'uploads/documents/';
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`);
+// --- НАСТРОЙКА ХРАНИЛИЩА MULTER ДЛЯ CLOUDINARY (ЗАМЕНА diskStorage) ---
+
+// Настройка хранилища Multer для загрузки файлов документов в Cloudinary
+const cloudinaryDocumentStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'jilproekt_documents', // Папка в Cloudinary для документов
+        resource_type: 'raw', // Важно для не-изображений (PDF, DOCX и т.д.)
+        public_id: (req, file) => `document-${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`
     }
 });
-const uploadDocument = multer({ storage: documentStorage });
+const uploadDocument = multer({ storage: cloudinaryDocumentStorage });
 
-// Настройка хранилища Multer для загрузки файлов изображений проектов
-const projectImageStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = 'uploads/projects/';
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
+// Настройка хранилища Multer для загрузки файлов изображений проектов в Cloudinary
+const cloudinaryProjectImageStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'jilproekt_projects', // Папка в Cloudinary для изображений проектов
+        format: async (req, file) => 'webp', // Оптимизированный формат (или 'png', 'jpg')
+        public_id: (req, file) => `project-image-${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`,
     },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`);
-    }
 });
 const uploadProjectImage = multer({
-    storage: projectImageStorage,
+    storage: cloudinaryProjectImageStorage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|gif/;
+        const filetypes = /jpeg|jpg|png|gif|webp/; // Добавил webp
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
         if (mimetype && extname) {
             return cb(null, true);
         }
-        cb('Ошибка: Поддерживаются только изображения (jpeg, jpg, png, gif)!');
+        cb('Ошибка: Поддерживаются только изображения (jpeg, jpg, png, gif, webp)!');
     }
 }).single('projectImage');
 
-// --- НОВАЯ НАСТРОЙКА MULTER ДЛЯ ИЗОБРАЖЕНИЙ НОВОСТЕЙ ---
-const newsImageStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = 'uploads/news/'; // Отдельная папка для изображений новостей
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
+// Настройка хранилища Multer для загрузки файлов изображений новостей в Cloudinary
+const cloudinaryNewsImageStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'jilproekt_news', // Отдельная папка в Cloudinary для изображений новостей
+        format: async (req, file) => 'webp', // Оптимизированный формат
+        public_id: (req, file) => `news-image-${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`,
     },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`);
-    }
 });
-
 const uploadNewsImage = multer({
-    storage: newsImageStorage,
+    storage: cloudinaryNewsImageStorage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|gif/;
+        const filetypes = /jpeg|jpg|png|gif|webp/;
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
         if (mimetype && extname) {
             return cb(null, true);
         }
-        cb('Ошибка: Поддерживаются только изображения (jpeg, jpg, png, gif)!');
+        cb('Ошибка: Поддерживаются только изображения (jpeg, jpg, png, gif, webp)!');
     }
 }).single('newsImage'); // 'newsImage' - имя поля формы для файла новости
 
-// Отдаем статические файлы из папок uploads/documents, uploads/projects И uploads/news
-app.use('../uploads/documents', express.static(path.join(__dirname, 'uploads', 'documents')));
-app.use('../uploads/projects', express.static(path.join(__dirname, 'uploads', 'projects')));
-app.use('../uploads/news', express.static(path.join(__dirname, 'uploads', 'news'))); // Добавлено для изображений новостей
 
-// --- Подключение к MongoDB ---
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB успешно подключена!'))
     .catch(err => console.error('Ошибка подключения к MongoDB:', err));
 
 // --- Определение схем и моделей Mongoose (для структуры данных в БД) ---
 
-// Схема для новостей (ОБНОВЛЕНА)
+// Схема для новостей
 const NewsSchema = new mongoose.Schema({
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: String, default: 'Администратор' },
-    imageUrl: { type: String, required: false }, // НОВОЕ ПОЛЕ ДЛЯ ИЗОБРАЖЕНИЯ НОВОСТИ
+    imageUrl: { type: String, required: false }, // Будет хранить URL из Cloudinary
     date: { type: Date, default: Date.now }
 });
 const News = mongoose.model('News', NewsSchema);
@@ -140,7 +127,8 @@ const DocumentSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: String,
     category: String,
-    fileUrl: { type: String, required: true }, // Путь к файлу на сервере
+    fileUrl: { type: String, required: true }, // Будет хранить URL из Cloudinary
+    publicId: { type: String, required: false }, // Добавлено для удобного удаления из Cloudinary
     uploadDate: { type: Date, default: Date.now }
 });
 const Document = mongoose.model('Document', DocumentSchema);
@@ -204,6 +192,10 @@ const ProjectSchema = new mongoose.Schema({
         required: true
     },
     imageUrl: {
+        type: String,
+        required: false
+    },
+    publicId: { // Добавлено для удобного удаления из Cloudinary
         type: String,
         required: false
     },
@@ -286,9 +278,8 @@ io.on('connection', (socket) => {
             }
 
             // Отсоединяемся от предыдущих комнат, если таковые были
-            // Это важно, чтобы пользователь не "висел" в нескольких чатах одновременно
             socket.rooms.forEach(room => {
-                if (room !== socket.id) { // Не отключаем от собственной комнаты сокета
+                if (room !== socket.id) {
                     socket.leave(room);
                     console.log(`Socket ${socket.id} покинул комнату ${room}`);
                 }
@@ -345,7 +336,7 @@ io.on('connection', (socket) => {
                 senderId: user.employeeId,
                 senderName: user.name,
                 message,
-                timestamp: newMessage.timestamp // Используем время из БД
+                timestamp: newMessage.timestamp
             });
         } catch (err) {
             console.error('Ошибка при отправке сообщения:', err.message);
@@ -361,7 +352,7 @@ io.on('connection', (socket) => {
 
 // --- API-роуты ---
 
-// --- Роуты для Аутентификации ---
+// --- Роуты для Аутентификации (без изменений) ---
 app.post('/api/auth/register', async (req, res) => {
     const { employeeId, name, position, department, password, role } = req.body;
     try {
@@ -461,7 +452,7 @@ app.get('/api/auth/me', auth, async (req, res) => {
 });
 
 
-// --- Роуты для Новостей (ОБНОВЛЕНЫ) ---
+// --- Роуты для Новостей (ОБНОВЛЕНЫ для Cloudinary) ---
 app.get('/api/news', async (req, res) => {
     try {
         const news = await News.find().sort({ date: -1 });
@@ -471,30 +462,35 @@ app.get('/api/news', async (req, res) => {
     }
 });
 
-app.post('/api/news', auth, authorizeManager, (req, res) => { // Используем uploadNewsImage
+app.post('/api/news', auth, authorizeManager, (req, res) => {
     uploadNewsImage(req, res, async (err) => {
         if (err) {
-            return res.status(400).json({ msg: err });
+            console.error('Multer/Cloudinary upload error:', err);
+            return res.status(400).json({ msg: err.message || 'Ошибка загрузки изображения новости' });
         }
 
         const { title, content } = req.body;
-        const imageUrl = req.file ? `/uploads/news/${req.file.filename}` : undefined; // Путь к изображению
+        // req.file.path содержит URL файла на Cloudinary
+        const imageUrl = req.file ? req.file.path : undefined;
+        const publicId = req.file ? req.file.filename : undefined; // Cloudinary public_id
 
         const newNews = new News({
             title,
             content,
             author: req.user.name || req.user.employeeId || 'Авторизованный пользователь',
-            imageUrl // Сохраняем URL изображения
+            imageUrl,
+            publicId // Сохраняем publicId для последующего удаления
         });
 
         try {
             const savedNews = await newNews.save();
             res.status(201).json(savedNews);
         } catch (err) {
-            // Если произошла ошибка при сохранении в БД, удаляем загруженный файл
-            if (req.file) {
-                fs.unlink(req.file.path, (unlinkErr) => {
-                    if (unlinkErr) console.error('Ошибка при удалении загруженного файла новости:', unlinkErr);
+            // Если произошла ошибка при сохранении в БД, пробуем удалить файл из Cloudinary
+            if (req.file && req.file.filename) {
+                cloudinary.uploader.destroy(req.file.filename, (destroyError, destroyResult) => {
+                    if (destroyError) console.error('Ошибка при удалении файла из Cloudinary после ошибки БД:', destroyError);
+                    console.log('Результат удаления из Cloudinary:', destroyResult);
                 });
             }
             console.error('Ошибка при сохранении новости:', err);
@@ -505,20 +501,20 @@ app.post('/api/news', auth, authorizeManager, (req, res) => { // Использ�
 
 app.delete('/api/news/:id', auth, authorizeAdmin, async (req, res) => {
     try {
-        const newsItem = await News.findById(req.params.id); // Ищем новость по ID
+        const newsItem = await News.findById(req.params.id);
         if (!newsItem) {
             return res.status(404).json({ message: 'Новость не найдена' });
         }
 
-        // Если у новости есть изображение, удаляем его с диска
-        if (newsItem.imageUrl) {
-            const imagePath = path.join(__dirname, newsItem.imageUrl);
-            fs.unlink(imagePath, (unlinkErr) => {
-                if (unlinkErr) console.error('Ошибка при удалении файла изображения новости:', unlinkErr);
+        // Если у новости есть изображение, удаляем его из Cloudinary
+        if (newsItem.publicId) {
+            cloudinary.uploader.destroy(newsItem.publicId, (error, result) => {
+                if (error) console.error('Ошибка при удалении изображения из Cloudinary:', error);
+                console.log('Результат удаления из Cloudinary:', result);
             });
         }
 
-        await News.findByIdAndDelete(req.params.id); // Удаляем новость из БД
+        await News.findByIdAndDelete(req.params.id);
         res.json({ message: 'Новость успешно удалена' });
     } catch (err) {
         console.error('Ошибка при удалении новости:', err);
@@ -527,7 +523,7 @@ app.delete('/api/news/:id', auth, authorizeAdmin, async (req, res) => {
 });
 
 
-// --- Роуты для Документов ---
+// --- Роуты для Документов (ОБНОВЛЕНЫ для Cloudinary) ---
 app.get('/api/documents', async (req, res) => {
     try {
         const documents = await Document.find().sort({ uploadDate: -1 });
@@ -536,34 +532,41 @@ app.get('/api/documents', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
 app.post('/api/documents', auth, authorizeManager, uploadDocument.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Файл не был загружен.' });
     }
 
     const { title, description, category } = req.body;
-    const fileUrl = `/uploads/documents/${req.file.filename}`;
+    // req.file.path содержит URL файла на Cloudinary
+    const fileUrl = req.file.path;
+    const publicId = req.file.filename; // Cloudinary public_id для raw-файлов
 
     const newDocument = new Document({
         title,
         description,
         category,
-        fileUrl
+        fileUrl,
+        publicId // Сохраняем publicId для удобного удаления
     });
 
     try {
         const savedDocument = await newDocument.save();
         res.status(201).json({ message: 'Документ успешно загружен и добавлен.', document: savedDocument });
     } catch (err) {
-        if (req.file) {
-            fs.unlink(req.file.path, (unlinkErr) => {
-                if (unlinkErr) console.error('Ошибка при удалении загруженного файла:', unlinkErr);
+        // Если произошла ошибка при сохранении в БД, пробуем удалить файл из Cloudinary
+        if (req.file && req.file.filename) {
+            cloudinary.uploader.destroy(req.file.filename, { resource_type: 'raw' }, (destroyError, destroyResult) => {
+                if (destroyError) console.error('Ошибка при удалении файла из Cloudinary после ошибки БД:', destroyError);
+                console.log('Результат удаления из Cloudinary:', destroyResult);
             });
         }
         console.error('Ошибка при сохранении документа в БД:', err);
         res.status(400).json({ message: err.message });
     }
 });
+
 app.delete('/api/documents/:id', auth, authorizeAdmin, async (req, res) => {
     try {
         const documentItem = await Document.findById(req.params.id);
@@ -571,10 +574,11 @@ app.delete('/api/documents/:id', auth, authorizeAdmin, async (req, res) => {
             return res.status(404).json({ message: 'Документ не найден' });
         }
 
-        const filePath = path.join(__dirname, documentItem.fileUrl);
-        if (fs.existsSync(filePath)) {
-            fs.unlink(filePath, (unlinkErr) => {
-                if (unlinkErr) console.error('Ошибка при удалении файла с диска:', unlinkErr);
+        // Удаляем файл из Cloudinary, используя publicId
+        if (documentItem.publicId) {
+            cloudinary.uploader.destroy(documentItem.publicId, { resource_type: 'raw' }, (error, result) => {
+                if (error) console.error('Ошибка при удалении файла документа из Cloudinary:', error);
+                console.log('Результат удаления из Cloudinary:', result);
             });
         }
 
@@ -587,7 +591,7 @@ app.delete('/api/documents/:id', auth, authorizeAdmin, async (req, res) => {
 });
 
 
-// --- Роуты для Заявок ---
+// --- Роуты для Заявок (без изменений) ---
 app.get('/api/requests/me', auth, async (req, res) => {
     try {
         const requests = await Request.find({ employeeId: req.user.employeeId }).sort({ submissionDate: -1 });
@@ -646,7 +650,7 @@ app.put('/api/requests/:id/status', auth, authorizeManager, async (req, res) => 
 });
 
 
-// --- Роуты для Базы знаний ---
+// --- Роуты для Базы знаний (без изменений) ---
 app.get('/api/knowledge', async (req, res) => {
     try {
         const items = await KnowledgeItem.find().sort({ date: -1 });
@@ -678,7 +682,7 @@ app.delete('/api/knowledge/:id', auth, authorizeAdmin, async (req, res) => {
 });
 
 
-// --- Роуты для Профиля сотрудника ---
+// --- Роуты для Профиля сотрудника (без изменений) ---
 app.get('/api/profile/me', auth, async (req, res) => {
     try {
         const user = await UserProfile.findById(req.user.id).select('-password');
@@ -709,7 +713,7 @@ app.put('/api/profile/me', auth, async (req, res) => {
 });
 
 
-// --- Роуты для Поиска ---
+// --- Роуты для Поиска (без изменений) ---
 app.get('/api/search/news', async (req, res) => {
     try {
         const query = req.query.q;
@@ -772,11 +776,12 @@ app.get('/api/search/knowledge', async (req, res) => {
     }
 });
 
-// --- Роуты для Проектов ---
+// --- Роуты для Проектов (ОБНОВЛЕНЫ для Cloudinary) ---
 app.post('/api/projects', auth, (req, res) => {
     uploadProjectImage(req, res, async (err) => {
         if (err) {
-            return res.status(400).json({ msg: err });
+            console.error('Multer/Cloudinary upload error:', err);
+            return res.status(400).json({ msg: err.message || 'Ошибка загрузки изображения проекта' });
         }
 
         if (req.user.role !== 'manager' && req.user.role !== 'admin') {
@@ -784,6 +789,8 @@ app.post('/api/projects', auth, (req, res) => {
         }
 
         const { title, description, startDate, endDate, departments } = req.body;
+        const imageUrl = req.file ? req.file.path : undefined; // URL из Cloudinary
+        const publicId = req.file ? req.file.filename : undefined; // public_id из Cloudinary
 
         try {
             const newProject = new Project({
@@ -792,12 +799,20 @@ app.post('/api/projects', auth, (req, res) => {
                 startDate,
                 endDate: endDate || null,
                 departments: Array.isArray(departments) ? departments : departments.split(',').map(d => d.trim()),
-                imageUrl: req.file ? `/uploads/projects/${req.file.filename}` : undefined
+                imageUrl,
+                publicId // Сохраняем publicId
             });
 
             const project = await newProject.save();
             res.json(project);
         } catch (err) {
+            // Если произошла ошибка при сохранении в БД, пробуем удалить файл из Cloudinary
+            if (req.file && req.file.filename) {
+                cloudinary.uploader.destroy(req.file.filename, (destroyError, destroyResult) => {
+                    if (destroyError) console.error('Ошибка при удалении файла из Cloudinary после ошибки БД:', destroyError);
+                    console.log('Результат удаления из Cloudinary:', destroyResult);
+                });
+            }
             console.error(err.message);
             res.status(500).send('Ошибка сервера');
         }
@@ -854,10 +869,11 @@ app.delete('/api/projects/:id', auth, authorizeAdmin, async (req, res) => {
             return res.status(404).json({ msg: 'Проект не найден' });
         }
 
-        if (project.imageUrl) {
-            const imagePath = path.join(__dirname, project.imageUrl);
-            fs.unlink(imagePath, (err) => {
-                if (err) console.error('Ошибка при удалении файла изображения:', err);
+        // Если у проекта есть изображение, удаляем его из Cloudinary
+        if (project.publicId) {
+            cloudinary.uploader.destroy(project.publicId, (error, result) => {
+                if (error) console.error('Ошибка при удалении изображения проекта из Cloudinary:', error);
+                console.log('Результат удаления из Cloudinary:', result);
             });
         }
 
@@ -874,7 +890,6 @@ app.delete('/api/projects/:id', auth, authorizeAdmin, async (req, res) => {
 
 
 // --- Запуск сервера ---
-// ВНИМАНИЕ: Теперь слушаем `server`, а не `app`!
 server.listen(PORT, () => {
     console.log(`Сервер бэкенда запущен на порту ${PORT}`);
     console.log(`Доступен по адресу: http://localhost:${PORT}`);
