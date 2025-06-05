@@ -28,8 +28,8 @@ module.exports = (auth, authorizeManager, authorizeAdmin, uploadDocument, cloudi
         }
 
         const { title, description, category } = req.body;
-        const fileUrl = req.file.secure_url; // Полный HTTPS URL, который возвращает Cloudinary
-        const publicId = req.file.public_id;
+        const fileUrl = req.file.path; // Полный HTTPS URL, который возвращает Cloudinary
+        const publicId = req.file.filename;
 
         const newDocument = new Document({
             title,
