@@ -114,9 +114,9 @@ const uploadNewsImage = multer({
 }).single('newsImage'); // 'newsImage' - имя поля формы для файла новости
 
 // Отдаем статические файлы из папок uploads/documents, uploads/projects И uploads/news
-app.use('/uploads/documents', express.static(path.join(__dirname, 'uploads', 'documents')));
-app.use('/uploads/projects', express.static(path.join(__dirname, 'uploads', 'projects')));
-app.use('/uploads/news', express.static(path.join(__dirname, 'uploads', 'news'))); // Добавлено для изображений новостей
+app.use('../uploads/documents', express.static(path.join(__dirname, 'uploads', 'documents')));
+app.use('../uploads/projects', express.static(path.join(__dirname, 'uploads', 'projects')));
+app.use('../uploads/news', express.static(path.join(__dirname, 'uploads', 'news'))); // Добавлено для изображений новостей
 
 // --- Подключение к MongoDB ---
 mongoose.connect(MONGO_URI)

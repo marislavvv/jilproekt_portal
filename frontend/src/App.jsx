@@ -266,7 +266,6 @@ function OnlineRequests({ user }) {
                         <option value="Отпуск">Отпуск</option>
                         <option value="Командировка">Командировка</option>
                         <option value="Техподдержка">Техподдержка</option>
-                        <option value="Болезнь/Больничный">Болезнь/больничный</option>
                         <option value="Другое">Другое</option>
                     </select>
                 </label>
