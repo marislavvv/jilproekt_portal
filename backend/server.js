@@ -14,7 +14,11 @@ const { Server } = require('socket.io'); // Импортируем Server из s
 // --- НОВЫЕ ИМПОРТЫ ДЛЯ CLOUDINARY ---
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-// --- КОНЕЦ НОВЫХ ИМПОРТОВ ---
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const app = express();
 const server = http.createServer(app);
